@@ -1,0 +1,150 @@
+#!/usr/bin/env python
+# Copyright (c) 2015, Patrick Uiterwijk <patrick@puiterwijk.org>
+# All rights reserved.
+#
+# This script is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This script is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this script.  If not, see <http://www.gnu.org/licenses/>.
+
+import time
+import datetime
+import errno
+import os.path
+import json
+import sys
+import math
+
+ENTRIES_FILE = os.path.expanduser('~/.idid')
+CURRENT_VERSION = 1
+ENTRIES = None
+
+
+def get_current_entries():
+    global ENTRIES
+
+    if ENTRIES is not None:
+        return ENTRIES
+    try:
+        with open(ENTRIES_FILE, 'r') as fle:
+            contents = json.loads(fle.read())
+        if contents['version'] == CURRENT_VERSION:
+            ENTRIES = contents['entries']
+            return ENTRIES
+        else:
+            raise Exception('Invalid file formation version: %s'
+                            % contents['version'])
+    except OSError as ex:
+        if ex.errno == errno.ENOENT:
+            return []
+        else:
+            raise
+
+
+def save_entries(entries):
+    global ENTRIES
+
+    contents = {'version': CURRENT_VERSION,
+                'entries': entries}
+    with open(ENTRIES_FILE, 'w') as fle:
+        fle.write(json.dumps(contents,
+                             sort_keys=True,
+                             indent=4))
+    ENTRIES = entries
+
+
+def add_entry(entry):
+    entry['timestamp'] = time.time()
+    current = get_current_entries()
+    current.append(entry)
+    save_entries(current)
+
+
+def command_remove_last(*args):
+    entries = get_current_entries()
+    if len(entries) < 1:
+        print('No entry to delete')
+        return 1
+
+    deleted = entries[-1]
+    if deleted['type'] != 'record':
+        print('Last entry was not a record, cannot delete')
+        return 1
+
+    entries = entries[:-1]
+    save_entries(entries)
+    print('Entry %s deleted' % deleted['title'])
+    return 0
+
+
+def export(entries):
+    current_day = None
+    for entry in entries:
+        entry['date'] = datetime.datetime.fromtimestamp(entry['timestamp'])
+        day = entry['date'].date().isoformat()
+        if current_day != day:
+            print('%s:' % day)
+            current_day = day
+        print('\t%s' % entry['title'])
+
+
+def command_export(*args):
+    entries = get_current_entries()
+    last_export = len(entries)-1
+    while last_export >= 0 and entries[last_export]['type'] != 'export':
+        last_export -= 1
+
+    if last_export == -1:
+        to_export = entries
+    else:
+        to_export = entries[last_export+1:]
+    to_export = [entry for entry in to_export if entry['type'] == 'record']
+    export(to_export)
+
+    if 'no-mark' not in args and len(to_export) > 0:
+        entry = {'type': 'export'}
+        add_entry(entry)
+    if 'no-banner' not in args:
+        print()
+        print('This overview was exported by idid on %s'
+              % datetime.datetime.now().isoformat())
+
+    return 0
+
+
+def command_add(title):
+    entry = {'type': 'record',
+             'title': title}
+    add_entry(entry)
+    print('Entry added')
+    return 0
+
+
+def decide_what_to_do():
+    if len(sys.argv) == 1:
+        print('Usage: %s [<title>|export|remove-last]' % (sys.argv[0]))
+        sys.exit(1)
+
+    command = sys.argv[1]
+    args = []
+    if len(sys.argv) > 2:
+        args = sys.argv[2:]
+
+    if command == 'remove-last':
+        sys.exit(command_remove_last(*args))
+    elif command == 'export':
+        sys.exit(command_export(*args))
+    else:
+        sys.exit(command_add(' '.join(sys.argv[1:])))
+
+
+if __name__ == '__main__':
+    decide_what_to_do()
