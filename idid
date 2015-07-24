@@ -21,7 +21,6 @@ import errno
 import os.path
 import json
 import sys
-import math
 
 ENTRIES_FILE = os.path.expanduser('~/.idid')
 CURRENT_VERSION = 1
@@ -42,7 +41,7 @@ def get_current_entries():
         else:
             raise Exception('Invalid file formation version: %s'
                             % contents['version'])
-    except OSError as ex:
+    except IOError as ex:
         if ex.errno == errno.ENOENT:
             return []
         else:
