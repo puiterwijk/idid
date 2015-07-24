@@ -112,7 +112,7 @@ def command_export(*args):
         entry = {'type': 'export'}
         add_entry(entry)
     if 'no-banner' not in args:
-        print()
+        print('')
         print('This overview was exported by idid on %s'
               % datetime.datetime.now().isoformat())
 
