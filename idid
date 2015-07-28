@@ -53,10 +53,11 @@ def save_entries(entries):
 
     contents = {'version': CURRENT_VERSION,
                 'entries': entries}
+    contents = json.dumps(contents,
+                          sort_keys=True,
+                          indent=4)
     with open(ENTRIES_FILE, 'w') as fle:
-        fle.write(json.dumps(contents,
-                             sort_keys=True,
-                             indent=4))
+        fle.write(contents)
     ENTRIES = entries
 
 
