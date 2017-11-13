@@ -1,3 +1,13 @@
+REPLACED FOR ME
+===============
+
+I wrote this tool to keep track of unplanned things I did without having to do `task add X` and then `task done <id>` every time.
+However, today @bowlofeggs pointed me to `task log`, which basically replaces it.
+
+Feel free to continue using it, but I'll stop using it in favor of `task log`.
+
+
+
 I Did
 =====
 
